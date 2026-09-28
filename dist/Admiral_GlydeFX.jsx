@@ -1717,14 +1717,14 @@
             var tile = { box: col, btn: b, label: t, preset: null, index: index };
             b.onDraw = function (state) {
                 var g = this.graphics, w = this.size.width, h = this.size.height, hov = false, sel = (picked === index);
-                try { hov = !!state.mouseOver; } catch (_) {}
+                try { hov = !!state.mouseOver && (!!tile.preset || curCat() === curMine()); } catch (_) {}
                 drawGlass(g, this);
                 fillRect(g, 0, 0, w, h, WHITE, hov ? 0.08 : 0.035);
                 if (tile.preset && tile.preset.points) {
                     drawSpeedThumb(g, w, h, tile.preset.points, sel || hov);
                 } else if (tile.preset) {
                     drawThumb(g, w, h, tile.preset.curve, sel || hov);
-                } else {
+                } else if (curCat() === curMine()) {
 
                     strokeLine(g, [[w / 2 - 6, h / 2], [w / 2 + 6, h / 2]], T.dim, 0.9, 1.5);
                     strokeLine(g, [[w / 2, h / 2 - 6], [w / 2, h / 2 + 6]], T.dim, 0.9, 1.5);
@@ -1830,12 +1830,13 @@
         function curHint() { return tab ? SPEED_HINT[spCat] : CAT_HINT[cat]; }
         function curCustom() { return tab ? spCustom : custom; }
         function readKey() { return tab ? "btn_read_layer" : "btn_read"; }
+        function emptyName() { return curCat() === curMine() ? "Empty" : ""; }
 
         function fitLabels() {
             var i, pr, s, brief, full = IMG[readKey()];
             for (i = 0; i < tiles.length; i++) {
                 pr = tiles[i].preset;
-                s = fitText(tiles[i].label, pr ? pr.tileName : "Empty");
+                s = fitText(tiles[i].label, pr ? pr.tileName : emptyName());
                 if (tiles[i].label.text !== s) tiles[i].label.text = s;
             }
             s = fitText(catHint, curHint());
@@ -1857,9 +1858,9 @@
             for (i = 0; i < tiles.length; i++) {
                 pr = shown[i] || null;
                 tiles[i].preset = pr;
-                tiles[i].label.text = fitText(tiles[i].label, pr ? pr.tileName : "Empty");
+                tiles[i].label.text = fitText(tiles[i].label, pr ? pr.tileName : emptyName());
                 paintText(tiles[i].label, pr ? T.text : T.dim);
-                if (!pr) tiles[i].btn.helpTip = "An empty place. Click it to save the " + (tab ? "speed curve" : "curve") + " in the editor here.";
+                if (!pr) tiles[i].btn.helpTip = emptyName() ? "An empty place. Click it to save the " + (tab ? "speed curve" : "curve") + " in the editor here." : "";
                 else if (tab) tiles[i].btn.helpTip = pr.name + "\n" + pr.tip;
                 else tiles[i].btn.helpTip = pr.name + "  (" + curveText(pr.curve) + ")\n" + pr.tip;
                 tiles[i].label.helpTip = tiles[i].btn.helpTip;
