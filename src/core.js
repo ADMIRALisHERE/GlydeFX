@@ -64,16 +64,32 @@
         ["Snap Back", [0.6, -0.5, 0.2, 1],    "Pulls back first, then snaps forward."]
     ];
 
-    var CATEGORIES = ["Essentials", "Classic In", "Classic Out", "Classic In Out", "Edit", "My Presets"];
-    var CAT_MINE = 5;
+    var CATEGORIES = ["Essentials", "Classic In", "Classic Out", "Classic In Out", "Edit"];
     var CAT_HINT = [
         "Everyday curves. Click one, then Apply.",
         "Standard curves that start slowly.",
         "Standard curves that land softly.",
         "Standard curves, slow at both ends.",
-        "Curves for edits: punches, whips, slams.",
-        "Click an empty place to save the editor's curve."
+        "Curves for edits: punches, whips, slams."
     ];
+
+    var CAT_TABLES = [];
+    if (typeof KEY_EXTRA !== "undefined") {
+        (function () {
+            var i, j, list;
+            for (i = 0; i < KEY_EXTRA.length; i++) {
+                list = KEY_EXTRA[i].presets;
+                for (j = 0; j < list.length; j += 8) {
+                    CAT_TABLES.push(list.slice(j, j + 8));
+                    CATEGORIES.push(KEY_EXTRA[i].name + (list.length > 8 ? " " + (j / 8 + 1) : ""));
+                    CAT_HINT.push(KEY_EXTRA[i].hint);
+                }
+            }
+        })();
+    }
+    CATEGORIES.push("My Presets");
+    CAT_HINT.push("Click an empty place to save the editor's curve.");
+    var CAT_MINE = CATEGORIES.length - 1;
 
     function categoryPresets(cat, custom) {
         var out = [], i, src, v;
@@ -92,7 +108,7 @@
             }
             return out;
         }
-        src = (cat === 0) ? ESSENTIALS : EDIT;
+        src = (cat === 0) ? ESSENTIALS : (cat === 4 ? EDIT : (CAT_TABLES[cat - 5] || []));
         for (i = 0; i < src.length; i++) out.push({ name: src[i][0], tileName: src[i][0], curve: src[i][1], tip: src[i][2] });
         return out;
     }
@@ -387,7 +403,7 @@
     /*  Speed ramps                                                        */
     /* ------------------------------------------------------------------ */
 
-    var SPEED_MIN = 0.05, SPEED_MAX = 10, SPEED_POINTS_MAX = 8;
+    var SPEED_MIN = 0.05, SPEED_MAX = 10, SPEED_POINTS_MAX = 12;
 
     var SPEED_POPULAR = [
         ["Montage",  [[0, 2.5], [0.25, 0.5], [0.5, 2.5], [0.75, 0.5], [1, 2.5]],
@@ -421,13 +437,42 @@
                    "Five points at normal speed, to shape by hand."]
     ];
 
-    var SPEED_CATEGORIES = ["Popular", "Basic", "My Presets"];
-    var SPEED_MINE = 2;
-    var SPEED_HINT = [
-        "Speed curves edit makers know. Click one, then Apply.",
-        "Simple ramps and fixed speeds.",
-        "Click an empty place to save the editor's curve."
+    var SPEED_MICRO = [
+        ["Micro",        { ease: [0.2, 0.63, 0.82, 0.41], avg: 1.4 }, "The micro-edit ramp: fast in, slow in the middle, fast out."],
+        ["Micro Snap",   { ease: [0.12, 0.62, 0.9, 0.36], avg: 1.6 }, "A harder micro ramp: faster ends and a deeper slow."],
+        ["Micro Soft",   { ease: [0.3, 0.6, 0.72, 0.42], avg: 1.2 }, "A gentler micro ramp for longer clips."],
+        ["Micro In",     [[0, 3.8], [0.3, 0.55], [0.65, 0.6], [1, 1.6]], "Rushes in, slows down, leaves at moderate speed."],
+        ["Micro Out",    [[0, 1.6], [0.35, 0.6], [0.7, 0.55], [1, 3.8]], "Moderate in, slows down, rushes out."],
+        ["Micro Hold",   [[0, 3], [0.35, 0.5], [0.65, 0.5], [1, 3]], "Fast ends with a long, even slow stretch between."],
+        ["Micro Drop",   [[0, 2.6], [0.4, 0.3], [1, 0.8]], "Fast in, then drops into slow motion and stays there."],
+        ["Micro Rise",   [[0, 0.8], [0.6, 0.3], [1, 2.6]], "Starts slow, sinks deeper, then bursts out."]
     ];
+
+    var SPEED_HINT_POPULAR = "Speed curves edit makers know. Click one, then Apply.";
+    var SPEED_HINT_MICRO = "Micro-edit ramps for very short clips.";
+    var SPEED_HINT_BASIC = "Simple ramps and fixed speeds.";
+    var SPEED_HINT_MINE = "Click an empty place to save the editor's curve.";
+
+    var SPEED_TABLES = [SPEED_POPULAR, SPEED_MICRO, SPEED_BASIC];
+    var SPEED_CATEGORIES = ["Popular", "Micro", "Basic"];
+    var SPEED_HINT = [SPEED_HINT_POPULAR, SPEED_HINT_MICRO, SPEED_HINT_BASIC];
+    if (typeof SPEED_EXTRA !== "undefined") {
+        (function () {
+            var i, j, list, part;
+            for (i = 0; i < SPEED_EXTRA.length; i++) {
+                list = SPEED_EXTRA[i].presets;
+                for (j = 0; j < list.length; j += 8) {
+                    part = list.slice(j, j + 8);
+                    SPEED_TABLES.push(part);
+                    SPEED_CATEGORIES.push(SPEED_EXTRA[i].name + (list.length > 8 ? " " + (j / 8 + 1) : ""));
+                    SPEED_HINT.push(SPEED_EXTRA[i].hint);
+                }
+            }
+        })();
+    }
+    SPEED_CATEGORIES.push("My Presets");
+    SPEED_HINT.push(SPEED_HINT_MINE);
+    var SPEED_MINE = SPEED_CATEGORIES.length - 1;
     var LENGTH_ITEMS = ["Keep clip length", "Keep all frames"];
 
     function copyPoints(pts) {
@@ -436,8 +481,38 @@
         return out;
     }
 
+    function easeSlope(p, u) {
+        var lo = 0, hi = 1, s = u, i, dx, dy;
+        if (u <= 0) return p[0] > 1e-6 ? p[1] / p[0] : 0;
+        if (u >= 1) return p[2] < 1 - 1e-6 ? (1 - p[3]) / (1 - p[2]) : 0;
+        for (i = 0; i < 50; i++) {
+            s = (lo + hi) / 2;
+            if (bez(p[0], p[2], s) < u) lo = s; else hi = s;
+        }
+        dx = 3 * (1 - s) * (1 - s) * p[0] + 6 * (1 - s) * s * (p[2] - p[0]) + 3 * s * s * (1 - p[2]);
+        dy = 3 * (1 - s) * (1 - s) * p[1] + 6 * (1 - s) * s * (p[3] - p[1]) + 3 * s * s * (1 - p[3]);
+        return dx > 1e-9 ? dy / dx : 0;
+    }
+
+    function easePoints(e) {
+        var out = [], i, u;
+        for (i = 0; i <= 8; i++) {
+            u = i / 8;
+            out.push([u, clamp(e.avg * easeSlope(e.ease, u), SPEED_MIN, SPEED_MAX)]);
+        }
+        return out;
+    }
+
+    function parseEase(text) {
+        var m = String(text).match(/-?\d*\.?\d+/g), v = [], i;
+        if (!m || m.length < 5) return null;
+        for (i = 0; i < 5; i++) v.push(parseFloat(m[i]));
+        if (!(v[4] > 0)) return null;
+        return { ease: cleanCurve(v.slice(0, 4)), avg: v[4] };
+    }
+
     function speedPresets(cat, custom) {
-        var out = [], i, src;
+        var out = [], i, src, def;
         if (cat === SPEED_MINE) {
             for (i = 0; i < CUSTOM_SLOTS; i++) {
                 out.push(custom[i] ? { name: custom[i].name, tileName: custom[i].name, points: custom[i].points,
@@ -445,9 +520,15 @@
             }
             return out;
         }
-        src = (cat === 0) ? SPEED_POPULAR : SPEED_BASIC;
+        src = SPEED_TABLES[cat] || [];
         for (i = 0; i < src.length; i++) {
-            out.push({ name: src[i][0], tileName: src[i][0], points: src[i][1], tip: src[i][2], keepFrames: !!src[i][3] });
+            def = src[i][1];
+            if (def instanceof Array) {
+                out.push({ name: src[i][0], tileName: src[i][0], points: def, tip: src[i][2], keepFrames: !!src[i][3] });
+            } else {
+                out.push({ name: src[i][0], tileName: src[i][0], points: easePoints(def), ease: def, tip: src[i][2],
+                           keepFrames: !!src[i][3] });
+            }
         }
         return out;
     }
@@ -597,11 +678,33 @@
             }
         }
         if (!plan) throw new Error("the curve has no speed");
+
+        var kts = [], kvs = [], kin = [], kout = [], ez, x1, x2, T, avg;
+        if (opts.ease && use === pts) {
+            ez = opts.ease.ease;
+            T = opts.keepFrames ? (s1 - s0) / opts.ease.avg : span;
+            avg = (s1 - s0) / T;
+            x1 = clamp(ez[0], MIN_X, 1);
+            x2 = clamp(ez[2], 0, 1 - MIN_X);
+            kts = [0, T];
+            kvs = [s0, s1];
+            kout = [[ez[1] / x1 * avg, x1 * 100], [0, 100 / 3]];
+            kin = [[ez[1] / x1 * avg, 100 / 3], [(1 - ez[3]) / (1 - x2) * avg, (1 - x2) * 100]];
+            plan = { span: T, factor: avg / opts.ease.avg, knots: plan.knots };
+        } else {
+            for (i = 0; i < plan.knots.length; i++) {
+                kts.push(plan.knots[i].t);
+                kvs.push(s0 + plan.knots[i].s);
+                kin.push([plan.knots[i].v, 100 / 3]);
+                kout.push([plan.knots[i].v, 100 / 3]);
+            }
+        }
+
         if (!L.timeRemapEnabled) L.timeRemapEnabled = true;
         tr = L.property("ADBE Time Remapping");
-        for (i = 0; i < plan.knots.length; i++) {
-            tr.setValueAtTime(start + plan.knots[i].t, s0 + plan.knots[i].s);
-            keep.push(start + plan.knots[i].t);
+        for (i = 0; i < kts.length; i++) {
+            tr.setValueAtTime(start + kts[i], kvs[i]);
+            keep.push(start + kts[i]);
         }
         for (n = tr.numKeys; n >= 1; n--) {
             kt = tr.keyTime(n);
@@ -610,11 +713,11 @@
             if (!ours) tr.removeKey(n);
         }
         for (i = 1; i <= tr.numKeys; i++) {
-            e = [new KeyframeEase(plan.knots[i - 1].v, 100 / 3)];
             tr.setInterpolationTypeAtKey(i, KeyframeInterpolationType.BEZIER, KeyframeInterpolationType.BEZIER);
             try { tr.setTemporalAutoBezierAtKey(i, false); } catch (_) {}
             try { tr.setTemporalContinuousAtKey(i, false); } catch (_) {}
-            tr.setTemporalEaseAtKey(i, e, e);
+            tr.setTemporalEaseAtKey(i, [new KeyframeEase(kin[i - 1][0], kin[i - 1][1])],
+                                       [new KeyframeEase(kout[i - 1][0], kout[i - 1][1])]);
         }
 
         L.outPoint = opts.keepFrames ? start + plan.span : start + span;

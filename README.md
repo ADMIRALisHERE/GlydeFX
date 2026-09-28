@@ -52,8 +52,11 @@ first; X Position and Y Position can overshoot.
 - **Read from Layer** loads a layer's speed curve back into the editor.
 
 Presets: **Popular** - Montage, Hero, Bullet, Jump Cut, Flash In, Flash Out, Velocity,
-Smooth Slow-mo; **Basic** - Speed Up, Slow Down, Ramp In, Ramp Out, Freeze Hit, 2x, 0.5x,
-Custom; **My Presets** - eight places for your own.
+Smooth Slow-mo; **Micro** - ramps for micro edits (very short clips cut fast in, slow in
+the middle, fast out): Micro, Micro Snap, Micro Soft, Micro In, Micro Out, Micro Hold,
+Micro Drop, Micro Rise; **Basic** - Speed Up, Slow Down, Ramp In, Ramp Out, Freeze Hit, 2x,
+0.5x, Custom; **My Presets** - eight places for your own. Micro, Micro Snap and Micro Soft
+are written as one smooth curve between two Time Remap keyframes.
 
 Every Apply is one undo step, and every control explains itself in a tooltip.
 

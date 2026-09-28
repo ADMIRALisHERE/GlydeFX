@@ -412,6 +412,9 @@
         var spCat = readIndex("speedCategory", 0, SPEED_CATEGORIES.length);
         var SP = parsePoints(readSetting("speedCurve", "")) || copyPoints(SPEED_POPULAR[6][1]);
         var speedName = String(readSetting("speedName", "Velocity"));
+
+        var SPE = parseEase(readSetting("speedEase", ""));
+        if (SPE && !samePoints(SP, easePoints(SPE))) SPE = null;
         var lengthMode = readIndex("lengthMode", 0, LENGTH_ITEMS.length);
 
         var shown = [];
@@ -999,6 +1002,7 @@
         function persistSpeed() {
             saveSetting("speedCurve", pointsText(SP));
             saveSetting("speedName", speedName);
+            saveSetting("speedEase", SPE ? SPE.ease.join(",") + "," + SPE.avg : "");
         }
 
         function curCat() { return tab ? spCat : cat; }
@@ -1088,12 +1092,13 @@
         var fitFull = "";
 
         function updateFitNote() {
-            var f = 1 / speedAverage(SP), s = String(Math.round(f * 100) / 100);
+            var f = 1 / (SPE ? SPE.avg : speedAverage(SP)), s = String(Math.round(f * 100) / 100);
             fitFull = (lengthMode ? "length x" : "speeds x") + s;
             fitNote.text = fitText(fitNote, fitFull);
         }
 
         function speedChanged(note) {
+            SPE = null;
             picked = findPicked();
             speedName = picked >= 0 ? shown[picked].name : "Custom speed";
             updateFitNote();
@@ -1110,8 +1115,9 @@
             updateFitNote();
         }
 
-        function setSpeed(pts, name) {
+        function setSpeed(pts, name, ease) {
             SP = copyPoints(pts);
+            SPE = ease || null;
             speedName = name;
             picked = findPicked();
             updateFitNote();
@@ -1127,7 +1133,7 @@
                 return;
             }
             if (tab) {
-                setSpeed(pr.points, pr.name);
+                setSpeed(pr.points, pr.name, pr.ease);
 
                 if (pr.keepFrames && lengthMode === 0) {
                     setLength(1);
@@ -1238,7 +1244,8 @@
             var comp = activeComp(), res, text, tip, onBeat = beatChk.value;
             if (!comp) { setStatus("Open a composition and select a clip first.", C_WARN); return; }
             try {
-                res = applySpeed(comp, SP, { keepFrames: lengthMode === 1, onBeat: onBeat, smoothFrames: smoothChk.value }, speedName);
+                res = applySpeed(comp, SP, { keepFrames: lengthMode === 1, onBeat: onBeat, smoothFrames: smoothChk.value,
+                                             ease: (SPE && samePoints(SP, easePoints(SPE))) ? SPE : null }, speedName);
             } catch (e) {
                 setStatus(errorText(e), C_ERR);
                 return;
