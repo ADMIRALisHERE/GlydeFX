@@ -94,16 +94,26 @@
         ["Snap Back", [0.6, -0.5, 0.2, 1],    "Pulls back first, then snaps forward."]
     ];
 
-    var CATEGORIES = ["Essentials", "Classic In", "Classic Out", "Classic In Out", "Edit"];
+    var ZOOM = [
+        ["Zoom In",     [0.12, 0.55, 0.95, 0.45], "Rushes in, eases through the middle, rushes out."],
+        ["Zoom Out",    [0.2, 0.62, 0.55, 0.92],  "Pulls out fast and settles."],
+        ["Smooth Zoom", [0.25, 0.4, 0.75, 0.6],   "An even zoom with a slight lift at both ends."],
+        ["Slow Zoom",   [0.35, 0, 0.3, 1],        "Starts and ends softly: a slow push in."],
+        ["Fast Zoom",   [0.01, 0.47, 0.99, 0.25], "Jumps at both ends and nearly holds in the middle."],
+        ["Hard Zoom",   [0.15, 0.95, 0.9, 0.12],  "Hits at once, holds, and hits again at the end."]
+    ];
+
+    var CATEGORIES = ["Essentials", "Classic In", "Classic Out", "Classic In Out", "Edit", "Zoom"];
     var CAT_HINT = [
         "Everyday curves. Click one, then Apply.",
         "Standard curves that start slowly.",
         "Standard curves that land softly.",
         "Standard curves, slow at both ends.",
-        "Curves for edits: punches, whips, slams."
+        "Curves for edits: punches, whips, slams.",
+        "Zoom curves for Scale keyframes."
     ];
 
-    var CAT_TABLES = [];
+    var CAT_TABLES = [ZOOM];
     if (typeof KEY_EXTRA !== "undefined") {
         (function () {
             var i, j, list;
@@ -467,25 +477,28 @@
                    "Five points at normal speed, to shape by hand."]
     ];
 
-    var SPEED_MICRO = [
-        ["Micro",        { ease: [0.2, 0.63, 0.82, 0.41], avg: 1.4 }, "The micro-edit ramp: fast in, slow in the middle, fast out."],
-        ["Micro Snap",   { ease: [0.12, 0.62, 0.9, 0.36], avg: 1.6 }, "A harder micro ramp: faster ends and a deeper slow."],
-        ["Micro Soft",   { ease: [0.3, 0.6, 0.72, 0.42], avg: 1.2 }, "A gentler micro ramp for longer clips."],
-        ["Micro In",     [[0, 3.8], [0.3, 0.55], [0.65, 0.6], [1, 1.6]], "Rushes in, slows down, leaves at moderate speed."],
-        ["Micro Out",    [[0, 1.6], [0.35, 0.6], [0.7, 0.55], [1, 3.8]], "Moderate in, slows down, rushes out."],
-        ["Micro Hold",   [[0, 3], [0.35, 0.5], [0.65, 0.5], [1, 3]], "Fast ends with a long, even slow stretch between."],
-        ["Micro Drop",   [[0, 2.6], [0.4, 0.3], [1, 0.8]], "Fast in, then drops into slow motion and stays there."],
-        ["Micro Rise",   [[0, 0.8], [0.6, 0.3], [1, 2.6]], "Starts slow, sinks deeper, then bursts out."]
+    var SPEED_EDITS = [
+        ["Micro",        { ease: [0.2, 0.63, 0.82, 0.41], avg: 1.4 }, "The micro-edit ramp for very short clips: fast in, slow in the middle, fast out."],
+        ["Smooth Ramp",  [[0, 3.6], [0.12, 1.4], [0.25, 0.62], [0.5, 0.55], [0.75, 0.68], [0.9, 1.3], [1, 2.7]],
+                         "Fast in, a long smooth slow-down, fast out."],
+        ["Hard Ramp",    [[0, 7], [0.1, 1.8], [0.25, 0.85], [0.5, 0.62], [0.75, 0.7], [0.9, 1.2], [1, 3.2]],
+                         "Very fast in, then slow motion, then out fast."],
+        ["Soft Ramp",    [[0, 2.8], [0.12, 1.45], [0.3, 0.9], [0.5, 0.78], [0.7, 0.92], [0.88, 1.5], [1, 2.4]],
+                         "A gentle ramp: never very fast, never very slow."],
+        ["Slow Dip",     [[0, 2.3], [0.15, 0.85], [0.35, 0.5], [0.5, 0.46], [0.65, 0.52], [0.85, 0.9], [1, 1.9]],
+                         "Dips into slow motion in the middle and back out."],
+        ["Long Slow-mo", [[0, 4.2], [0.1, 1.2], [0.25, 0.66], [0.5, 0.68], [0.75, 0.66], [0.9, 1.05], [1, 2.4]],
+                         "Quick in and out, with a long even slow motion between."]
     ];
 
     var SPEED_HINT_POPULAR = "Speed curves edit makers know. Click one, then Apply.";
-    var SPEED_HINT_MICRO = "Micro-edit ramps for very short clips.";
+    var SPEED_HINT_EDITS = "Ramps from edits: fast in, slow, fast out.";
     var SPEED_HINT_BASIC = "Simple ramps and fixed speeds.";
     var SPEED_HINT_MINE = "Click an empty place to save the editor's curve.";
 
-    var SPEED_TABLES = [SPEED_POPULAR, SPEED_MICRO, SPEED_BASIC];
-    var SPEED_CATEGORIES = ["Popular", "Micro", "Basic"];
-    var SPEED_HINT = [SPEED_HINT_POPULAR, SPEED_HINT_MICRO, SPEED_HINT_BASIC];
+    var SPEED_TABLES = [SPEED_POPULAR, SPEED_EDITS, SPEED_BASIC];
+    var SPEED_CATEGORIES = ["Popular", "Edits", "Basic"];
+    var SPEED_HINT = [SPEED_HINT_POPULAR, SPEED_HINT_EDITS, SPEED_HINT_BASIC];
     if (typeof SPEED_EXTRA !== "undefined") {
         (function () {
             var i, j, list, part;

@@ -15,13 +15,14 @@ license key, no network.
 2. Pick a curve: click a preset, or drag the two handles in the editor.
 3. Click **Apply to Keyframes**.
 
-Presets, eight to a category:
+Presets, up to eight to a category:
 
 | Category | Presets |
 |---|---|
 | **Essentials** | Linear, Ease, Ease In, Ease Out, Ease In Out, Smooth, Snap, Back Out |
 | **Classic In / Out / In Out** | Sine, Quad, Cubic, Quart, Quint, Expo, Circ, Back (the easings.net curves) |
 | **Edit** | Punch, Pop, Whip, Slam, Glide, Drop, Float, Snap Back |
+| **Zoom** | Zoom In, Zoom Out, Smooth Zoom, Slow Zoom, Fast Zoom, Hard Zoom (for Scale keyframes) |
 | **My Presets** | eight places for your own curves |
 
 The four numbers under the editor are the curve as `x1, y1, x2, y2`, the same as CSS
@@ -52,11 +53,11 @@ first; X Position and Y Position can overshoot.
 - **Read from Layer** loads a layer's speed curve back into the editor.
 
 Presets: **Popular** - Montage, Hero, Bullet, Jump Cut, Flash In, Flash Out, Velocity,
-Smooth Slow-mo; **Micro** - ramps for micro edits (very short clips cut fast in, slow in
-the middle, fast out): Micro, Micro Snap, Micro Soft, Micro In, Micro Out, Micro Hold,
-Micro Drop, Micro Rise; **Basic** - Speed Up, Slow Down, Ramp In, Ramp Out, Freeze Hit, 2x,
-0.5x, Custom; **My Presets** - eight places for your own. Micro, Micro Snap and Micro Soft
-are written as one smooth curve between two Time Remap keyframes.
+Smooth Slow-mo; **Edits** - ramps the way edits run them, fast in, slow, fast out: Micro
+(for very short clips), Smooth Ramp, Hard Ramp, Soft Ramp, Slow Dip, Long Slow-mo;
+**Basic** - Speed Up, Slow Down, Ramp In, Ramp Out, Freeze Hit, 2x, 0.5x, Custom; **My
+Presets** - eight places for your own. Micro is written as one smooth curve between two
+Time Remap keyframes.
 
 Every Apply is one undo step, and every control explains itself in a tooltip.
 
@@ -89,7 +90,7 @@ Measured in After Effects 24.6 by sampling the animated values:
 ## Known limits
 
 - Position, paths and colors cannot overshoot (see above).
-- The Edit and Speed presets are a first version: their shapes follow their names and may
+- The Edit, Zoom and Speed presets are a first version: their shapes follow their names and may
   be tuned in later releases.
 - Speed needs footage or a precomposition at 100 % stretch.
 
