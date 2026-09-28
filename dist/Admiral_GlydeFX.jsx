@@ -646,7 +646,9 @@
             try { tr.setTemporalContinuousAtKey(i, false); } catch (_) {}
             tr.setTemporalEaseAtKey(i, e, e);
         }
-        if (opts.keepFrames) L.outPoint = start + plan.span;
+
+        L.outPoint = opts.keepFrames ? start + plan.span : start + span;
+        if (Math.abs(L.inPoint - start) > 1e-6) L.inPoint = start;
         if (opts.smoothFrames) {
             L.frameBlendingType = FrameBlendingType.PIXEL_MOTION;
             comp.frameBlending = true;
