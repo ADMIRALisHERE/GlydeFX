@@ -160,6 +160,13 @@
         ctrl.minimumSize.width = 10;
     }
 
+    function fitListWidth(dd) {
+        var w = Math.round(dd.size.width);
+        if (!(w > 40) || dd.__listW === w) return;
+        dd.itemSize = [w - 26, 20];
+        dd.__listW = w;
+    }
+
     function redraw(ctrl) {
         try {
             ctrl.visible = false;
@@ -315,6 +322,7 @@
                   "Essentials: the everyday curves.\n" +
                   "Classic In / Out / In Out: the standard easing families.\n" +
                   "Edit: curves named after what edits use them for.\n" +
+                  "Zoom: zoom curves for Scale keyframes.\n" +
                   "My Presets: the curves you saved.",
         apply: "Writes the curve between every two neighbouring selected keyframes -\n" +
                "any layers, any properties. " + UNDO_KEYS + " undoes it in one step.",
@@ -328,7 +336,8 @@
         speedEditor: "The clip's speed over its length: left is its first frame, right its last.\n" +
                      "The bright line is normal speed (1x); up is faster, down is slower.\n" +
                      "Drag the points. Double-click the curve to add a point,\n" +
-                     "double-click a point to remove it.",
+                     "double-click a point to remove it. Some presets curve between\n" +
+                     "their points and play those eases; moving a point straightens them.",
         length: "Keep clip length: the clip keeps its place and length in the timeline;\n" +
                 "its speeds are scaled so it still shows the same part of the footage.\n" +
                 "Keep all frames: the speeds are used as drawn, and the clip gets\n" +
@@ -342,6 +351,7 @@
                 "for the composition), so slow motion looks smooth. Renders take longer.",
         speedCategory: "Which presets to show.\n" +
                        "Popular: the speed curves edit makers know.\n" +
+                       "Edits: ramps the way edits run them - fast in, slow, fast out.\n" +
                        "Basic: simple ramps and fixed speeds.\n" +
                        "My Presets: the speed curves you saved.",
         applySpeed: "Writes the speed curve onto every selected video or precomp layer,\n" +
@@ -413,8 +423,10 @@
         var SP = parsePoints(readSetting("speedCurve", "")) || copyPoints(SPEED_POPULAR[6][1]);
         var speedName = String(readSetting("speedName", "Velocity"));
 
-        var SPE = parseEase(readSetting("speedEase", ""));
-        if (SPE && !samePoints(SP, easePoints(SPE))) SPE = null;
+        var SPE = parseShape(readSetting("speedEase", ""));
+        if (SPE && !samePoints(SP, shapePoints(SPE))) SPE = null;
+
+        var SPS = SPE ? shapeSamples(SPE) : null;
         var lengthMode = readIndex("lengthMode", 0, LENGTH_ITEMS.length);
 
         var shown = [];
@@ -732,7 +744,7 @@
                 }
             }
             strokeRect(g, a[0] + 0.5, a[1] + 0.5, b[0] - a[0], b[1] - a[1], T.edge, 0.22);
-            line = speedLine(SP, spPx);
+            line = speedLine(SPS || SP, spPx);
 
             poly = [[line[0][0], b[1]]].concat(line).concat([[line[line.length - 1][0], b[1]]]);
             g.newPath();
@@ -901,7 +913,7 @@
                 drawGlass(g, this);
                 fillRect(g, 0, 0, w, h, WHITE, hov ? 0.08 : 0.035);
                 if (tile.preset && tile.preset.points) {
-                    drawSpeedThumb(g, w, h, tile.preset.points, sel || hov);
+                    drawSpeedThumb(g, w, h, tile.preset.samples || tile.preset.points, sel || hov);
                 } else if (tile.preset) {
                     drawThumb(g, w, h, tile.preset.curve, sel || hov);
                 } else if (curCat() === curMine()) {
@@ -1002,7 +1014,7 @@
         function persistSpeed() {
             saveSetting("speedCurve", pointsText(SP));
             saveSetting("speedName", speedName);
-            saveSetting("speedEase", SPE ? SPE.ease.join(",") + "," + SPE.avg : "");
+            saveSetting("speedEase", shapeText(SPE));
         }
 
         function curCat() { return tab ? spCat : cat; }
@@ -1100,6 +1112,7 @@
 
         function speedChanged(note) {
             SPE = null;
+            SPS = null;
             picked = findPicked();
             speedName = picked >= 0 ? shown[picked].name : "Custom speed";
             updateFitNote();
@@ -1116,9 +1129,10 @@
             updateFitNote();
         }
 
-        function setSpeed(pts, name, ease) {
+        function setSpeed(pts, name, shape) {
             SP = copyPoints(pts);
-            SPE = ease || null;
+            SPE = shape || null;
+            SPS = SPE ? shapeSamples(SPE) : null;
             speedName = name;
             picked = findPicked();
             updateFitNote();
@@ -1134,7 +1148,7 @@
                 return;
             }
             if (tab) {
-                setSpeed(pr.points, pr.name, pr.ease);
+                setSpeed(pr.points, pr.name, pr.shape);
 
                 if (pr.keepFrames && lengthMode === 0) {
                     setLength(1);
@@ -1246,7 +1260,7 @@
             if (!comp) { setStatus("Open a composition and select a clip first.", C_WARN); return; }
             try {
                 res = applySpeed(comp, SP, { keepFrames: lengthMode === 1, onBeat: onBeat, smoothFrames: smoothChk.value,
-                                             ease: (SPE && samePoints(SP, easePoints(SPE))) ? SPE : null }, speedName);
+                                             shape: (SPE && samePoints(SP, shapePoints(SPE))) ? SPE : null }, speedName);
             } catch (e) {
                 setStatus(errorText(e), C_ERR);
                 return;
@@ -1352,6 +1366,8 @@
             } finally {
                 quiet = false;
             }
+            catDD.__listW = 0;
+            lengthDD.__listW = 0;
             catDD.helpTip = tab ? TIP.speedCategory : TIP.category;
             applyBtn.__key = tab ? "btn_apply_layer" : "btn_apply";
             applyBtn.helpTip = tab ? TIP.applySpeed : TIP.apply;
@@ -1489,6 +1505,9 @@
                     layoutKeepingSize();
                 }
                 root.layout.resize();
+
+                fitListWidth(catDD);
+                if (tab) fitListWidth(lengthDD);
             } catch (_) {}
             try {
                 if (tiles[0] && tiles[0].label.size.width !== lastLabelW) {

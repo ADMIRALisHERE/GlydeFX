@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1 - 2026-09-29
+
+- **Presets that carry their own eases** (Micro) now show as their own keyframes - two points
+  for Micro instead of nine - with the speed they play drawn between them, and are written
+  key for key, each with its ease. Moving a point turns them into an ordinary point curve.
+- **Slow-mo on beat** finds the slow moment of such a preset along its curve, so Micro goes
+  onto the beat again.
+- **The category and Length lists** no longer open wider than the panel after it has been
+  made narrower (their list kept the widest width the panel ever had).
+- Tooltips list the Edits and Zoom categories.
+
 ## 1.0 - 2026-09-28
 
 First release.

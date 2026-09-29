@@ -6,7 +6,7 @@
     /* ------------------------------------------------------------------ */
 
     var APP_NAME = "GlydeFX";
-    var VERSION  = "1.0";
+    var VERSION  = "1.0.1";
     var SETTINGS_SECTION = "AdmiralGlydeFx.1";
     var UNDO_KEYS = ($.os.indexOf("Windows") >= 0) ? "Ctrl+Z" : "Cmd+Z";
 
@@ -494,30 +494,86 @@
         return out;
     }
 
-    function easeSlope(p, u) {
-        var lo = 0, hi = 1, s = u, i, dx, dy;
-        if (u <= 0) return p[0] > 1e-6 ? p[1] / p[0] : 0;
-        if (u >= 1) return p[2] < 1 - 1e-6 ? (1 - p[3]) / (1 - p[2]) : 0;
-        for (i = 0; i < 50; i++) {
-            s = (lo + hi) / 2;
-            if (bez(p[0], p[2], s) < u) lo = s; else hi = s;
-        }
-        dx = 3 * (1 - s) * (1 - s) * p[0] + 6 * (1 - s) * s * (p[2] - p[0]) + 3 * s * s * (1 - p[2]);
-        dy = 3 * (1 - s) * (1 - s) * p[1] + 6 * (1 - s) * s * (p[3] - p[1]) + 3 * s * s * (1 - p[3]);
-        return dx > 1e-9 ? dy / dx : 0;
+    function shapeKeys(sp) {
+        var e, x1, x2;
+        if (sp.keys) return sp.keys;
+        e = sp.ease;
+        x1 = clamp(e[0], MIN_X, 1);
+        x2 = clamp(e[2], 0, 1 - MIN_X);
+        return [[0, 0, e[1] / x1 * sp.avg, 1 / 3, x1], [1, 1, (1 - e[3]) / (1 - x2) * sp.avg, 1 - x2, 1 / 3]];
     }
 
-    function easePoints(e) {
-        var out = [], i, u;
-        for (i = 0; i <= 8; i++) {
-            u = i / 8;
-            out.push([u, clamp(e.avg * easeSlope(e.ease, u), SPEED_MIN, SPEED_MAX)]);
+    function shapePoints(sp) {
+        var k = shapeKeys(sp), out = [], i;
+        for (i = 0; i < k.length; i++) out.push([k[i][0], clamp(k[i][2], SPEED_MIN, SPEED_MAX)]);
+        return out;
+    }
+
+    function cubic(p0, p1, p2, p3, s) {
+        return (1 - s) * (1 - s) * (1 - s) * p0 + 3 * (1 - s) * (1 - s) * s * p1 + 3 * (1 - s) * s * s * p2 + s * s * s * p3;
+    }
+
+    function shapeSamples(sp) {
+        var k = shapeKeys(sp), out = [], i, j, s, du, a, b, u0, u1, u2, u3, y0, y1, y2, y3, dx, dy;
+        for (i = 1; i < k.length; i++) {
+            du = k[i][0] - k[i - 1][0];
+            a = k[i - 1][4] * du;
+            b = k[i][3] * du;
+            u0 = k[i - 1][0]; y0 = k[i - 1][1];
+            u3 = k[i][0];     y3 = k[i][1];
+            u1 = u0 + a; y1 = y0 + k[i - 1][2] / sp.avg * a;
+            u2 = u3 - b; y2 = y3 - k[i][2] / sp.avg * b;
+            for (j = (i === 1 ? 0 : 1); j <= 24; j++) {
+                s = j / 24;
+                dx = 3 * (1 - s) * (1 - s) * (u1 - u0) + 6 * (1 - s) * s * (u2 - u1) + 3 * s * s * (u3 - u2);
+                dy = 3 * (1 - s) * (1 - s) * (y1 - y0) + 6 * (1 - s) * s * (y2 - y1) + 3 * s * s * (y3 - y2);
+                out.push([cubic(u0, u1, u2, u3, s), clamp(dx > 1e-9 ? sp.avg * dy / dx : k[j < 12 ? i - 1 : i][2], SPEED_MIN, SPEED_MAX)]);
+            }
         }
         return out;
     }
 
-    function parseEase(text) {
-        var m = String(text).match(/-?\d*\.?\d+/g), v = [], i;
+    function shapeDense(sp, n) {
+        var s = shapeSamples(sp), out = [], i, j = 1, u, f;
+        for (i = 0; i < n; i++) {
+            u = i / (n - 1);
+            while (j < s.length - 1 && s[j][0] < u) j++;
+            f = (s[j][0] - s[j - 1][0]) > 1e-9 ? (u - s[j - 1][0]) / (s[j][0] - s[j - 1][0]) : 1;
+            out.push([u, clamp(s[j - 1][1] + (s[j][1] - s[j - 1][1]) * clamp(f, 0, 1), SPEED_MIN, SPEED_MAX)]);
+        }
+        return out;
+    }
+
+    function shapeText(sp) {
+        var out = [], i;
+        if (!sp) return "";
+        if (!sp.keys) return sp.ease.join(",") + "," + sp.avg;
+        for (i = 0; i < sp.keys.length; i++) out.push(sp.keys[i].join(","));
+        return "K" + sp.avg + ";" + out.join(";");
+    }
+
+    function parseShape(text) {
+        var s = String(text), parts, keys = [], i, j, v, row, avg, m;
+        if (s.charAt(0) === "K") {
+            parts = s.substring(1).split(";");
+            avg = parseFloat(parts[0]);
+            if (!(avg > 0) || parts.length < 3) return null;
+            for (i = 1; i < parts.length; i++) {
+                v = parts[i].split(",");
+                if (v.length !== 5) return null;
+                row = [];
+                for (j = 0; j < 5; j++) {
+                    row.push(parseFloat(v[j]));
+                    if (!isFinite(row[j])) return null;
+                }
+                if (keys.length && !(row[0] > keys[keys.length - 1][0])) return null;
+                keys.push(row);
+            }
+            if (keys[0][0] !== 0 || keys[keys.length - 1][0] !== 1) return null;
+            return { keys: keys, avg: avg };
+        }
+        m = s.match(/-?\d*\.?\d+/g);
+        v = [];
         if (!m || m.length < 5) return null;
         for (i = 0; i < 5; i++) v.push(parseFloat(m[i]));
         if (!(v[4] > 0)) return null;
@@ -539,8 +595,8 @@
             if (def instanceof Array) {
                 out.push({ name: src[i][0], tileName: src[i][0], points: def, tip: src[i][2], keepFrames: !!src[i][3] });
             } else {
-                out.push({ name: src[i][0], tileName: src[i][0], points: easePoints(def), ease: def, tip: src[i][2],
-                           keepFrames: !!src[i][3] });
+                out.push({ name: src[i][0], tileName: src[i][0], points: shapePoints(def), shape: def,
+                           samples: shapeSamples(def), tip: src[i][2], keepFrames: !!src[i][3] });
             }
         }
         return out;
@@ -666,7 +722,10 @@
 
     function applySpeedToLayer(comp, L, pts, opts) {
         var start = L.inPoint, span = L.outPoint - L.inPoint, s0, s1, plan, tr, i, n, kt, keep = [], beat = null;
-        var use = pts, times, guess, u, ours, e, slow = slowestPoint(pts), beatNote = "";
+        var times, guess, u, ours, e, beatNote = "";
+
+        if (opts.shape && opts.onBeat) pts = shapeDense(opts.shape, 12);
+        var use = pts, slow = slowestPoint(pts);
         if (!(span > 0)) throw new Error("it has no length");
         s0 = sourceTime(L, start);
         s1 = sourceTime(L, L.outPoint);
@@ -692,18 +751,19 @@
         }
         if (!plan) throw new Error("the curve has no speed");
 
-        var kts = [], kvs = [], kin = [], kout = [], ez, x1, x2, T, avg;
-        if (opts.ease && use === pts) {
-            ez = opts.ease.ease;
-            T = opts.keepFrames ? (s1 - s0) / opts.ease.avg : span;
-            avg = (s1 - s0) / T;
-            x1 = clamp(ez[0], MIN_X, 1);
-            x2 = clamp(ez[2], 0, 1 - MIN_X);
-            kts = [0, T];
-            kvs = [s0, s1];
-            kout = [[ez[1] / x1 * avg, x1 * 100], [0, 100 / 3]];
-            kin = [[ez[1] / x1 * avg, 100 / 3], [(1 - ez[3]) / (1 - x2) * avg, (1 - x2) * 100]];
-            plan = { span: T, factor: avg / opts.ease.avg, knots: plan.knots };
+        var kts = [], kvs = [], kin = [], kout = [], K, T, R = s1 - s0, f, v;
+        if (opts.shape && use === pts) {
+            K = shapeKeys(opts.shape);
+            T = opts.keepFrames ? R / opts.shape.avg : span;
+            f = R / T / opts.shape.avg;
+            for (i = 0; i < K.length; i++) {
+                v = K[i][2] * f;
+                kts.push(K[i][0] * T);
+                kvs.push(s0 + K[i][1] * R);
+                kin.push([v, i === 0 ? 100 / 3 : clamp(K[i][3] * 100, 0.1, 100)]);
+                kout.push([v, i === K.length - 1 ? 100 / 3 : clamp(K[i][4] * 100, 0.1, 100)]);
+            }
+            plan = { span: T, factor: f, knots: plan.knots };
         } else {
             for (i = 0; i < plan.knots.length; i++) {
                 kts.push(plan.knots[i].t);
